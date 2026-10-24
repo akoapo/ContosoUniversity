@@ -1,23 +1,33 @@
 ﻿namespace ContosoUniversity.Infrastructure.DataAccess
 {
-    using System.Web.Mvc;
-    using App_Start;
-    using DAL;
+    using System.Threading.Tasks;
+    using ContosoUniversity.DAL;
+    using Microsoft.AspNetCore.Mvc.Filters;
 
-    public class MvcTransactionFilter : ActionFilterAttribute
+    /// <summary>
+    /// Opens a transaction on the request-scoped SchoolContext before the action runs and
+    /// commits (or rolls back, when the action threw) afterwards - the ASP.NET Core equivalent
+    /// of the MVC5 ActionFilterAttribute that resolved the context from StructureMap.
+    /// Register globally: options.Filters.Add&lt;MvcTransactionFilter&gt;();
+    /// </summary>
+    public class MvcTransactionFilter : IAsyncActionFilter
     {
-        public override void OnActionExecuting(ActionExecutingContext filterContext)
+        private readonly SchoolContext _context;
+
+        public MvcTransactionFilter(SchoolContext context)
         {
-            // Logger.Instance.Verbose("MvcTransactionFilter::OnActionExecuting");
-            var context = StructuremapMvc.ParentScope.CurrentNestedContainer.GetInstance<SchoolContext>();
-            context.BeginTransaction();
+            _context = context;
         }
 
-        public override void OnActionExecuted(ActionExecutedContext filterContext)
+        public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
+            // Logger.Instance.Verbose("MvcTransactionFilter::OnActionExecuting");
+            _context.BeginTransaction();
+
+            var executedContext = await next();
+
             // Logger.Instance.Verbose("MvcTransactionFilter::OnActionExecuted");
-            var instance = StructuremapMvc.ParentScope.CurrentNestedContainer.GetInstance<SchoolContext>();
-            instance.CloseTransaction(filterContext.Exception);
+            _context.CloseTransaction(executedContext.Exception);
         }
     }
 }

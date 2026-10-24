@@ -1,8 +1,8 @@
 ﻿namespace ContosoUniversity.Features.Home
 {
-    using MediatR;
     using System.Threading.Tasks;
-    using System.Web.Mvc;
+    using MediatR;
+    using Microsoft.AspNetCore.Mvc;
 
     public class UiController : Controller
     {
@@ -13,23 +13,32 @@
             _mediator = mediator;
         }
 
-        public ActionResult Index()
+        public IActionResult Index()
         {
             return View();
         }
 
-        public async Task<ActionResult> About()
+        public async Task<IActionResult> About()
         {
-            var data = await _mediator.SendAsync(new About.Query());
+            var data = await _mediator.Send(new About.Query());
 
             return View(data);
         }
 
-        public ActionResult Contact()
+        public IActionResult Contact()
         {
             ViewBag.Message = "Your contact page.";
 
             return View();
+        }
+
+        /// <summary>
+        /// Target of app.UseExceptionHandler("/Home/Error"); renders Features/Shared/Error.cshtml.
+        /// Replaces the MVC5 global HandleErrorAttribute registered in FilterConfig.
+        /// </summary>
+        public IActionResult Error()
+        {
+            return View("Error");
         }
     }
 }

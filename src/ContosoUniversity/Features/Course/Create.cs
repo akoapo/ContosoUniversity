@@ -1,6 +1,8 @@
 ﻿namespace ContosoUniversity.Features.Course
 {
     using System.ComponentModel.DataAnnotations;
+    using System.Threading;
+    using System.Threading.Tasks;
     using AutoMapper;
     using DAL;
     using MediatR;
@@ -17,20 +19,24 @@
             public Department Department { get; set; }
         }
 
-        public class Handler : RequestHandler<Command>
+        public class Handler : IRequestHandler<Command>
         {
             private readonly SchoolContext _db;
+            private readonly IMapper _mapper;
 
-            public Handler(SchoolContext db)
+            public Handler(SchoolContext db, IMapper mapper)
             {
                 _db = db;
+                _mapper = mapper;
             }
 
-            protected override void HandleCore(Command message)
+            public Task Handle(Command message, CancellationToken cancellationToken)
             {
-                var course = Mapper.Map<Command, Course>(message);
+                var course = _mapper.Map<Command, Course>(message);
 
                 _db.Courses.Add(course);
+
+                return Task.CompletedTask;
             }
         }
     }

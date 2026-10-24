@@ -8,11 +8,6 @@
 
     public class DefaultDisplayLabelBuilder : IElementBuilder
     {
-        public bool Matches(ElementRequest subject)
-        {
-            return true;
-        }
-
         public HtmlTag Build(ElementRequest request)
         {
             return new HtmlTag("").NoTag().Text(BreakUpCamelCase(request.Accessor.Name));

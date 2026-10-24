@@ -2,15 +2,18 @@
 {
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using AutoMapper;
+    using AutoMapper.QueryableExtensions;
     using DAL;
     using MediatR;
+    using Microsoft.EntityFrameworkCore;
     using Models;
 
     public class Index
     {
-        public class Query : IAsyncRequest<Result>
+        public class Query : IRequest<Result>
         {
             public Department SelectedDepartment { get; set; }
         }
@@ -29,25 +32,29 @@
             }
         }
 
-        public class Handler : IAsyncRequestHandler<Query, Result>
+        public class Handler : IRequestHandler<Query, Result>
         {
             private readonly SchoolContext _db;
+            private readonly IMapper _mapper;
 
-            public Handler(SchoolContext db)
+            public Handler(SchoolContext db, IMapper mapper)
             {
                 _db = db;
+                _mapper = mapper;
             }
 
-            public async Task<Result> Handle(Query message)
+            public async Task<Result> Handle(Query message, CancellationToken cancellationToken)
             {
-                int? departmentID = message.SelectedDepartment == null 
+                int? departmentID = message.SelectedDepartment == null
                     ? (int?)null
                     : message.SelectedDepartment.DepartmentID;
 
-                var courses = await _db.Courses
+                var query = _db.Courses
                     .Where(c => !departmentID.HasValue || c.DepartmentID == departmentID)
-                    .OrderBy(d => d.CourseID)
-                    .ProjectToListAsync<Result.Course>();
+                    .OrderBy(d => d.CourseID);
+
+                var courses = await _mapper.ProjectTo<Result.Course>(query)
+                    .ToListAsync(cancellationToken);
 
                 return new Result
                 {

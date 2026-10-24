@@ -44,6 +44,12 @@
         protected abstract int GetValue(T instance);
         protected abstract string GetDisplayValue(T instance);
 
+        /// <summary>
+        /// <c>request.Get&lt;T&gt;()</c> delegates to the service locator attached to the
+        /// ElementRequest by the element generator. That locator is the current request's
+        /// <c>IServiceProvider</c> (see HtmlHelperExtensions.GetGenerator), so the scoped
+        /// SchoolContext of the current request is used — never a captured/singleton one.
+        /// </summary>
         protected virtual IEnumerable<T> Source(ElementRequest request)
         {
             return request.Get<SchoolContext>().Set<T>();

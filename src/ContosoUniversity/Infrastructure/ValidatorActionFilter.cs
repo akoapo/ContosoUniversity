@@ -1,40 +1,49 @@
 ﻿namespace ContosoUniversity.Infrastructure
 {
-    using System.Net;
-    using System.Web.Mvc;
+    using Microsoft.AspNetCore.Http;
+    using Microsoft.AspNetCore.Mvc;
+    using Microsoft.AspNetCore.Mvc.Filters;
     using Newtonsoft.Json;
 
+    /// <summary>
+    /// Short-circuits an action when model binding/FluentValidation produced errors.
+    /// GET requests get a bare 400; every other verb gets a 400 whose body is the
+    /// Newtonsoft-serialized ModelState — the layout's AJAX error handler parses that payload
+    /// to highlight the offending fields, so the shape must stay identical.
+    /// </summary>
     public class ValidatorActionFilter : IActionFilter
     {
-        public void OnActionExecuting(ActionExecutingContext filterContext)
+        public void OnActionExecuting(ActionExecutingContext context)
         {
-            if (!filterContext.Controller.ViewData.ModelState.IsValid)
+            if (context.ModelState.IsValid)
             {
-                if (filterContext.HttpContext.Request.HttpMethod == "GET")
-                {
-                    var result = new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-                    filterContext.Result = result;
-                }
-                else
-                {
-                    var result = new ContentResult();
-                    string content = JsonConvert.SerializeObject(filterContext.Controller.ViewData.ModelState,
-                        new JsonSerializerSettings
-                        {
-                            ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-                        });
-                    result.Content = content;
-                    result.ContentType = "application/json";
+                return;
+            }
 
-                    filterContext.HttpContext.Response.StatusCode = 400;
-                    filterContext.Result = result;
-                }
+            if (HttpMethods.IsGet(context.HttpContext.Request.Method))
+            {
+                context.Result = new BadRequestResult();
+            }
+            else
+            {
+                var content = JsonConvert.SerializeObject(context.ModelState,
+                    new JsonSerializerSettings
+                    {
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                    });
+
+                context.HttpContext.Response.StatusCode = 400;
+                context.Result = new ContentResult
+                {
+                    Content = content,
+                    ContentType = "application/json",
+                    StatusCode = 400
+                };
             }
         }
 
-        public void OnActionExecuted(ActionExecutedContext filterContext)
+        public void OnActionExecuted(ActionExecutedContext context)
         {
-
         }
     }
 }

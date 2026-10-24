@@ -2,13 +2,16 @@
 {
     using System;
     using System.ComponentModel.DataAnnotations;
+    using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using DAL;
     using MediatR;
+    using Microsoft.EntityFrameworkCore;
 
     public class Details
     {
-        public class Query : IAsyncRequest<Model>
+        public class Query : IRequest<Model>
         {
             public int Id { get; set; }
         }
@@ -28,7 +31,7 @@
 
         }
 
-        public class QueryHandler : IAsyncRequestHandler<Query, Model>
+        public class QueryHandler : IRequestHandler<Query, Model>
         {
             private readonly SchoolContext _context;
 
@@ -37,14 +40,18 @@
                 _context = context;
             }
 
-            public async Task<Model> Handle(Query message)
+            public async Task<Model> Handle(Query message, CancellationToken cancellationToken)
             {
+                // Same projection as the original EF6 Database.SqlQuery<Model> call; the column list is
+                // explicit (instead of d.*) because EF Core maps SqlQueryRaw results by property name.
                 string query = @"
-SELECT d.*, p.LastName + ', ' + p.FirstName AS [AdministratorFullName]
+SELECT d.DepartmentID, d.Name, d.Budget, d.StartDate, p.LastName + ', ' + p.FirstName AS [AdministratorFullName]
 FROM Department d
 LEFT OUTER JOIN Person p ON d.InstructorID = p.ID
-WHERE d.DepartmentID = @p0";
-                Model department = await _context.Database.SqlQuery<Model>(query, message.Id).SingleOrDefaultAsync();
+WHERE d.DepartmentID = {0}";
+                Model department = await _context.Database
+                    .SqlQueryRaw<Model>(query, message.Id)
+                    .SingleOrDefaultAsync(cancellationToken);
 
                 return department;
             }

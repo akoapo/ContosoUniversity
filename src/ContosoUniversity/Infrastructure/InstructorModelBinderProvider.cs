@@ -1,15 +1,15 @@
 ﻿namespace ContosoUniversity.Infrastructure
 {
-    using System;
-    using System.Web.Mvc;
-    using App_Start;
+    using Microsoft.AspNetCore.Mvc.ModelBinding;
     using Models;
 
     public class InstructorModelBinderProvider : IModelBinderProvider
     {
-        public IModelBinder GetBinder(Type modelType)
+        public IModelBinder GetBinder(ModelBinderProviderContext context)
         {
-            return typeof(Instructor).IsAssignableFrom(modelType) ? StructuremapMvc.ParentScope.GetInstance<InstructorModelBinder>() : null;
+            return typeof(Instructor).IsAssignableFrom(context.Metadata.ModelType)
+                ? new InstructorModelBinder()
+                : null;
         }
     }
 }
