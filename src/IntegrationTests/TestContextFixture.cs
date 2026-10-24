@@ -1,25 +1,23 @@
 ﻿namespace ContosoUniversity.IntegrationTests
 {
     using System;
-    using System.Data.Entity;
     using System.Linq;
-    using System.Net.Mime;
     using DAL;
-    using DependencyResolution;
     using MediatR;
+    using Microsoft.EntityFrameworkCore;
 
     public class TestContextFixture
     {
-        private readonly StructureMapDependencyScope scope;
+        private readonly TestServiceScope scope;
 
-        public TestContextFixture(StructureMapDependencyScope scope)
+        public TestContextFixture(TestServiceScope scope)
         {
             this.scope = scope;
         }
 
         public void SetUp()
         {
-            scope.CreateNestedContainer();
+            scope.CreateNestedScope();
         }
 
         public void SaveAll(params object[] entities)
@@ -31,7 +29,9 @@
                     var entry = dbContext.ChangeTracker.Entries().FirstOrDefault(entityEntry => entityEntry.Entity == entity);
                     if (entry == null)
                     {
-                        dbContext.Set(entity.GetType()).Add(entity);
+                        // EF6's dbContext.Set(entity.GetType()).Add(entity) has no non-generic
+                        // DbSet equivalent in EF Core; the non-generic Add is the direct match.
+                        dbContext.Add(entity);
                     }
                 }
             });
@@ -90,7 +90,15 @@
         {
             var connString = LocalDbFactory.Instance.CreateConnectionStringBuilder();
             connString.InitialCatalog = "ContosoUniversity";
-            var dbContext = new SchoolContext(connString.ToString());
+
+            // SchoolContext is now EF Core and only accepts DbContextOptions, so the old
+            // new SchoolContext(connectionString) is expressed as an options build here. The
+            // semantics are unchanged: a fresh context outside the test's service scope.
+            var options = new DbContextOptionsBuilder<SchoolContext>()
+                .UseSqlServer(connString.ToString())
+                .Options;
+
+            var dbContext = new SchoolContext(options);
 
             try
             {
@@ -107,7 +115,31 @@
 
         public void Send(IRequest message)
         {
-            Send((IRequest<Unit>)message);
+            // MediatR 12's IRequest is the non-generic, Unit-returning request; ISender exposes
+            // Send<TRequest>(TRequest, CancellationToken) : Task for it. The public signature here
+            // stays synchronous, so the async send is awaited inline.
+            var context = scope.GetInstance<SchoolContext>();
+
+            context.BeginTransaction();
+
+            var mediator = scope.GetInstance<IMediator>();
+
+            Exception exc = null;
+            try
+            {
+                mediator.Send(message).GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                exc = e;
+            }
+
+            context.CloseTransaction(exc);
+
+            if (exc != null)
+            {
+                throw new Exception("Failed to send message.", exc);
+            }
         }
 
         public TResult Send<TResult>(IRequest<TResult> message, bool asNonPullStep = false)
@@ -123,7 +155,7 @@
             Exception exc = null;
             try
             {
-                result = mediator.Send(message);
+                result = mediator.Send(message).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {

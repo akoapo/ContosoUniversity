@@ -1,9 +1,9 @@
 ﻿namespace ContosoUniversity.Features.Department
 {
     using System.Threading.Tasks;
-    using System.Web.Mvc;
     using Infrastructure;
     using MediatR;
+    using Microsoft.AspNetCore.Mvc;
 
     public class UiController : Controller
     {
@@ -14,70 +14,73 @@
             _mediator = mediator;
         }
 
-        public async Task<ActionResult> Index()
+        public async Task<IActionResult> Index()
         {
-            var model = await _mediator.SendAsync(new Index.Query());
+            var model = await _mediator.Send(new Index.Query());
 
             return View(model);
         }
 
-        public async Task<ActionResult> Details(Details.Query query)
+        public async Task<IActionResult> Details(Details.Query query)
         {
-            var department = await _mediator.SendAsync(query);
+            var department = await _mediator.Send(query);
 
             if (department == null)
             {
-                return HttpNotFound();
+                return NotFound();
             }
             return View(department);
         }
 
-        public ActionResult Create()
+        [HttpGet]
+        public IActionResult Create()
         {
             return View(new Create.Command());
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create(Create.Command model)
+        public async Task<IActionResult> Create(Create.Command model)
         {
-            _mediator.Send(model);
+            await _mediator.Send(model);
 
             return this.RedirectToActionJson(c => c.Index());
         }
 
-        public async Task<ActionResult> Edit(Edit.Query query)
+        [HttpGet]
+        public async Task<IActionResult> Edit(Edit.Query query)
         {
-            var department = await _mediator.SendAsync(query);
+            var department = await _mediator.Send(query);
 
             if (department == null)
             {
-                return HttpNotFound();
+                return NotFound();
             }
             return View(department);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<ActionResult> Edit(Edit.Command model)
+        public async Task<IActionResult> Edit(Edit.Command model)
         {
-            await _mediator.SendAsync(model);
+            await _mediator.Send(model);
 
             return this.RedirectToActionJson(c => c.Index());
         }
 
-        public async Task<ActionResult> Delete(Delete.Query query)
+        [HttpGet]
+        public async Task<IActionResult> Delete(Delete.Query query)
         {
-            var model = await _mediator.SendAsync(query);
+            var model = await _mediator.Send(query);
 
             return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<ActionResult> Delete(Delete.Command command)
+        public async Task<IActionResult> Delete(Delete.Command command)
         {
-            await _mediator.SendAsync(command);
+            await _mediator.Send(command);
 
             return this.RedirectToActionJson(c => c.Index());
         }

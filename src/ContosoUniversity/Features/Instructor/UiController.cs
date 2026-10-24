@@ -1,9 +1,9 @@
 ﻿namespace ContosoUniversity.Features.Instructor
 {
     using System.Threading.Tasks;
-    using System.Web.Mvc;
     using Infrastructure;
     using MediatR;
+    using Microsoft.AspNetCore.Mvc;
 
     public class UiController : Controller
     {
@@ -14,64 +14,67 @@
             _mediator = mediator;
         }
 
-        public async Task<ActionResult> Index(Index.Query query)
+        public async Task<IActionResult> Index(Index.Query query)
         {
-            var model = await _mediator.SendAsync(query);
+            var model = await _mediator.Send(query);
 
             return View(model);
         }
 
-        public async Task<ActionResult> Details(Details.Query query)
+        public async Task<IActionResult> Details(Details.Query query)
         {
-            var model = await _mediator.SendAsync(query);
+            var model = await _mediator.Send(query);
 
             return View(model);
         }
 
-        public async Task<ActionResult> Create()
+        [HttpGet]
+        public async Task<IActionResult> Create()
         {
-            var model = await _mediator.SendAsync(new CreateEdit.Query());
+            var model = await _mediator.Send(new CreateEdit.Query());
 
             return View("CreateEdit", model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<ActionResult> Create(CreateEdit.Command command)
+        public async Task<IActionResult> Create(CreateEdit.Command command)
         {
-            await _mediator.SendAsync(command);
-            
+            await _mediator.Send(command);
+
             return this.RedirectToActionJson("Index");
         }
 
-        public async Task<ActionResult> Edit(CreateEdit.Query query)
+        [HttpGet]
+        public async Task<IActionResult> Edit(CreateEdit.Query query)
         {
-            var model = await _mediator.SendAsync(query);
+            var model = await _mediator.Send(query);
 
             return View("CreateEdit", model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<ActionResult> Edit(CreateEdit.Command command)
+        public async Task<IActionResult> Edit(CreateEdit.Command command)
         {
-            await _mediator.SendAsync(command);
+            await _mediator.Send(command);
 
             return this.RedirectToActionJson("Index");
         }
 
-        public async Task<ActionResult> Delete(Delete.Query query)
+        [HttpGet]
+        public async Task<IActionResult> Delete(Delete.Query query)
         {
-            var model = await _mediator.SendAsync(query);
+            var model = await _mediator.Send(query);
 
             return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<ActionResult> Delete(Delete.Command command)
+        public async Task<IActionResult> Delete(Delete.Command command)
         {
-            await _mediator.SendAsync(command);
+            await _mediator.Send(command);
 
             return this.RedirectToActionJson("Index");
         }

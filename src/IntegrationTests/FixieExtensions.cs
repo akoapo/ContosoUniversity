@@ -1,12 +1,20 @@
 ﻿namespace ContosoUniversity.IntegrationTests
 {
+    using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
-    using Fixie.Conventions;
-    using Ploeh.AutoFixture;
-    using Ploeh.AutoFixture.Kernel;
+    using AutoFixture;
+    using AutoFixture.Kernel;
 
+    /// <summary>
+    /// Fixie 4 replacements for the Fixie 1.0 <c>Fixie.Conventions.ClassExpression</c>
+    /// extension methods. The old DSL filtered an expression object; the Fixie 4
+    /// <see cref="Fixie.IDiscovery"/> model filters <see cref="Type"/> sequences, so each
+    /// former <c>ClassExpression</c> helper is re-expressed as a <see cref="Type"/> predicate
+    /// (plus a sequence-level overload preserving the original "filter the candidate classes"
+    /// usage).
+    /// </summary>
     public static class FixieExtensions
     {
         public static IEnumerable<object[]> ResolveParametersWith(this MethodInfo methodInfo, IFixture fixture)
@@ -19,26 +27,62 @@
                 1);
         }
 
-        public static ClassExpression IsInNamespaceOf<T>(this ClassExpression expr)
+        /// <summary>
+        /// Former <c>ClassExpression.IsInNamespaceOf&lt;T&gt;()</c>, which delegated to Fixie 1.0's
+        /// <c>InTheSameNamespaceAs(typeof(T))</c>: the class' namespace equals, or is nested
+        /// underneath, the namespace of <typeparamref name="T"/>.
+        /// </summary>
+        public static bool IsInNamespaceOf<T>(this Type type)
         {
-            return expr.InTheSameNamespaceAs(typeof(T));
+            var target = typeof(T).Namespace;
+
+            if (target == null)
+            {
+                return type.Namespace == null;
+            }
+
+            return type.Namespace != null
+                   && (type.Namespace == target || type.Namespace.StartsWith(target + ".", StringComparison.Ordinal));
         }
 
-        public static ClassExpression AreInIntegrationTestNamespace(this ClassExpression expr)
+        public static IEnumerable<Type> IsInNamespaceOf<T>(this IEnumerable<Type> types)
         {
-            return expr.Where(type => type.Namespace.Contains("IntegrationTests"));
+            return types.Where(type => type.IsInNamespaceOf<T>());
         }
 
-        public static ClassExpression ConstructorHasArguments(this ClassExpression filter)
+        /// <summary>Former <c>ClassExpression.AreInIntegrationTestNamespace()</c>.</summary>
+        public static bool IsInIntegrationTestNamespace(this Type type)
         {
-            return filter.Where(t => t.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-                    .Any(x => x.GetParameters().Any()));
+            return type.Namespace != null && type.Namespace.Contains("IntegrationTests");
         }
 
-        public static ClassExpression ConstructorDoesntHaveArguments(this ClassExpression filter)
+        public static IEnumerable<Type> AreInIntegrationTestNamespace(this IEnumerable<Type> types)
         {
-            return filter.Where(t => t.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-                    .All(x => x.GetParameters().Length == 0));
+            return types.Where(type => type.IsInIntegrationTestNamespace());
+        }
+
+        /// <summary>Former <c>ClassExpression.ConstructorHasArguments()</c>.</summary>
+        public static bool ConstructorHasArguments(this Type type)
+        {
+            return type.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+                .Any(x => x.GetParameters().Any());
+        }
+
+        public static IEnumerable<Type> ConstructorHasArguments(this IEnumerable<Type> types)
+        {
+            return types.Where(type => type.ConstructorHasArguments());
+        }
+
+        /// <summary>Former <c>ClassExpression.ConstructorDoesntHaveArguments()</c>.</summary>
+        public static bool ConstructorDoesntHaveArguments(this Type type)
+        {
+            return type.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+                .All(x => x.GetParameters().Length == 0);
+        }
+
+        public static IEnumerable<Type> ConstructorDoesntHaveArguments(this IEnumerable<Type> types)
+        {
+            return types.Where(type => type.ConstructorDoesntHaveArguments());
         }
     }
 }

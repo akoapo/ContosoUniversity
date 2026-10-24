@@ -2,7 +2,7 @@
 {
     using System;
     using System.Collections.Concurrent;
-    using Ploeh.AutoFixture;
+    using AutoFixture;
 
     public class AutoFixtureFactory
     {

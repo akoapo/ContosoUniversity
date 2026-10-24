@@ -52,7 +52,7 @@
             </td>
 
             <td>
-                @(Html.Link<UiController>(c => c.Index(new Index.Query { Id = item.ID }), "Select")) |
+                @(Html.Link<UiController>(c => c.Index(new ContosoUniversity.Features.Instructor.Index.Query { Id = item.ID }), "Select")) |
                 @(Html.Link<UiController>(c => c.Edit(new CreateEdit.Query { Id = item.ID }))) |
                 @(Html.Link<UiController>(c => c.Details(new Details.Query { Id = item.ID }))) |
                 @(Html.Link<UiController>(c => c.Delete(new Delete.Query { Id = item.ID })))
@@ -83,7 +83,7 @@
             }
             <tr class="@selectedRow">
                 <td>
-                    @(Html.Link<UiController>(c => c.Index(new Index.Query {Id = Model.InstructorID, CourseID = item.CourseID}), "Select"))
+                    @(Html.Link<UiController>(c => c.Index(new ContosoUniversity.Features.Instructor.Index.Query {Id = Model.InstructorID, CourseID = item.CourseID}), "Select"))
                 </td>
                 <td>
                     @item.CourseID

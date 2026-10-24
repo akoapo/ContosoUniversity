@@ -3,6 +3,7 @@
     using System;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Threading;
     using System.Threading.Tasks;
     using AutoMapper;
     using DAL;
@@ -39,20 +40,24 @@
             public Instructor Administrator { get; set; }
         }
 
-        public class CommandHandler : RequestHandler<Command>
+        public class CommandHandler : IRequestHandler<Command>
         {
             private readonly SchoolContext _context;
+            private readonly IMapper _mapper;
 
-            public CommandHandler(SchoolContext context)
+            public CommandHandler(SchoolContext context, IMapper mapper)
             {
                 _context = context;
+                _mapper = mapper;
             }
 
-            protected override void HandleCore(Command message)
+            public Task Handle(Command message, CancellationToken cancellationToken)
             {
-                var department = Mapper.Map<Command, Department>(message);
+                var department = _mapper.Map<Command, Department>(message);
 
                 _context.Departments.Add(department);
+
+                return Task.CompletedTask;
             }
         }
     }

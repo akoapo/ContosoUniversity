@@ -2,9 +2,11 @@
 {
     using ContosoUniversity.DAL;
     using MediatR;
+    using Microsoft.EntityFrameworkCore;
     using System;
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
+    using System.Threading;
     using System.Threading.Tasks;
 
     public class About
@@ -17,9 +19,9 @@
             public int StudentCount { get; set; }
         }
 
-        public class Query : IAsyncRequest<IEnumerable<EnrollmentDateGroup>> { }
+        public class Query : IRequest<IEnumerable<EnrollmentDateGroup>> { }
 
-        public class Handler : IAsyncRequestHandler<Query, IEnumerable<EnrollmentDateGroup>>
+        public class Handler : IRequestHandler<Query, IEnumerable<EnrollmentDateGroup>>
         {
             private readonly SchoolContext _dbContext;
 
@@ -28,7 +30,7 @@
                 _dbContext = dbContext;
             }
 
-            public async Task<IEnumerable<EnrollmentDateGroup>> Handle(Query message)
+            public async Task<IEnumerable<EnrollmentDateGroup>> Handle(Query message, CancellationToken cancellationToken)
             {
                 // Commenting out LINQ to show how to do the same thing in SQL.
                 //IQueryable<EnrollmentDateGroup> = from student in db.Students
@@ -44,7 +46,9 @@
                     + "FROM Person "
                     + "WHERE Discriminator = 'Student' "
                     + "GROUP BY EnrollmentDate";
-                IEnumerable<EnrollmentDateGroup> data = await _dbContext.Database.SqlQuery<EnrollmentDateGroup>(query).ToListAsync();
+                IEnumerable<EnrollmentDateGroup> data = await _dbContext.Database
+                    .SqlQueryRaw<EnrollmentDateGroup>(query)
+                    .ToListAsync(cancellationToken);
 
                 return data;
             }

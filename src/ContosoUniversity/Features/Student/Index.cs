@@ -3,11 +3,15 @@
     using System;
     using System.ComponentModel.DataAnnotations;
     using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using AutoMapper;
+    using AutoMapper.QueryableExtensions;
     using DAL;
-    using Infrastructure.Mapping;
+    using DelegateDecompiler.EntityFrameworkCore;
     using MediatR;
-    using Models;
-    using PagedList;
+    using X.PagedList;
+    using X.PagedList.EF;
 
     public class Index
     {
@@ -42,13 +46,15 @@
         public class QueryHandler : IRequestHandler<Query, Result>
         {
             private readonly SchoolContext _db;
+            private readonly IMapper _mapper;
 
-            public QueryHandler(SchoolContext db)
+            public QueryHandler(SchoolContext db, IMapper mapper)
             {
                 _db = db;
+                _mapper = mapper;
             }
 
-            public Result Handle(Query message)
+            public async Task<Result> Handle(Query message, CancellationToken cancellationToken)
             {
                 var model = new Result
                 {
@@ -94,7 +100,9 @@
 
                 int pageSize = 3;
                 int pageNumber = (message.Page ?? 1);
-                model.Results = students.ProjectToPagedList<Model>(pageNumber, pageSize);
+                model.Results = await _mapper.ProjectTo<Model>(students)
+                    .DecompileAsync()
+                    .ToPagedListAsync(pageNumber, pageSize, cancellationToken: cancellationToken);
 
                 return model;
             }

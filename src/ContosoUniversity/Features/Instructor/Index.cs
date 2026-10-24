@@ -4,15 +4,19 @@
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using AutoMapper;
+    using AutoMapper.QueryableExtensions;
     using DAL;
+    using DelegateDecompiler.EntityFrameworkCore;
     using MediatR;
+    using Microsoft.EntityFrameworkCore;
     using Models;
 
     public class Index
     {
-        public class Query : IAsyncRequest<Model>
+        public class Query : IRequest<Model>
         {
             public int? Id { get; set; }
             public int? CourseID { get; set; }
@@ -67,37 +71,44 @@
             }
         }
 
-        public class Handler : IAsyncRequestHandler<Query, Model>
+        public class Handler : IRequestHandler<Query, Model>
         {
             private readonly SchoolContext _db;
+            private readonly IMapper _mapper;
 
-            public Handler(SchoolContext db)
+            public Handler(SchoolContext db, IMapper mapper)
             {
                 _db = db;
+                _mapper = mapper;
             }
 
-            public async Task<Model> Handle(Query message)
+            public async Task<Model> Handle(Query message, CancellationToken cancellationToken)
             {
-                var instructors = await _db.Instructors
-                    .OrderBy(i => i.LastName)
-                    .ProjectToListAsync<Model.Instructor>();
+                var instructors = await _mapper
+                    .ProjectTo<Model.Instructor>(_db.Instructors.OrderBy(i => i.LastName))
+                    .DecompileAsync()
+                    .ToListAsync(cancellationToken);
 
                 var courses = new List<Model.Course>();
                 var enrollments = new List<Model.Enrollment>();
 
                 if (message.Id != null)
                 {
-                    courses = await _db.CourseInstructors
-                        .Where(ci => ci.InstructorID == message.Id)
-                        .Select(ci => ci.Course)
-                        .ProjectToListAsync<Model.Course>();
+                    courses = await _mapper
+                        .ProjectTo<Model.Course>(_db.CourseInstructors
+                            .Where(ci => ci.InstructorID == message.Id)
+                            .Select(ci => ci.Course))
+                        .DecompileAsync()
+                        .ToListAsync(cancellationToken);
                 }
 
                 if (message.CourseID != null)
                 {
-                    enrollments = await _db.Enrollments
-                        .Where(x => x.CourseID == message.CourseID)
-                        .ProjectToListAsync<Model.Enrollment>();
+                    enrollments = await _mapper
+                        .ProjectTo<Model.Enrollment>(_db.Enrollments
+                            .Where(x => x.CourseID == message.CourseID))
+                        .DecompileAsync()
+                        .ToListAsync(cancellationToken);
                 }
 
                 var viewModel = new Model

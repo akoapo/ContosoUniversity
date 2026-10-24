@@ -2,18 +2,19 @@
 {
     using System;
     using System.Linq.Expressions;
-    using System.Web.Mvc;
-    using System.Web.Routing;
-    using Microsoft.Web.Mvc;
+    using Microsoft.AspNetCore.Mvc;
 
-    public static class UrlHelperExtensions
+    /// <summary>
+    /// Strongly typed <c>Url.Action(c =&gt; c.Edit(...))</c> on <see cref="IUrlHelper"/>.
+    /// Named <c>UrlHelperExpressionExtensions</c> so it cannot be confused with the framework's
+    /// own <c>Microsoft.AspNetCore.Mvc.UrlHelperExtensions</c>.
+    /// </summary>
+    public static class UrlHelperExpressionExtensions
     {
-        public static string Action<TController>(this UrlHelper helper, Expression<Action<TController>> action)
-    where TController : Controller
+        public static string Action<TController>(this IUrlHelper helper, Expression<Action<TController>> action)
+            where TController : Controller
         {
-            var url = LinkBuilder.BuildUrlFromExpression(helper.RequestContext, RouteTable.Routes, action);
-
-            return UrlHelper.GenerateContentUrl("~/" + url, helper.RequestContext.HttpContext);
+            return LinkBuilder.BuildUrlFromExpression(helper, action);
         }
     }
 }

@@ -1,22 +1,32 @@
 ﻿namespace ContosoUniversity.Infrastructure
 {
-    using System.Web.Mvc;
+    using System.Threading.Tasks;
     using DAL;
+    using Microsoft.AspNetCore.Mvc.ModelBinding;
+    using Microsoft.Extensions.DependencyInjection;
 
+    /// <summary>
+    /// Binds a route/query/form value holding a Department id to the tracked Department entity.
+    /// </summary>
     public class DepartmentModelBinder : IModelBinder
     {
-        private readonly SchoolContext _dbContext;
-
-        public DepartmentModelBinder(SchoolContext dbContext)
+        public async Task BindModelAsync(ModelBindingContext bindingContext)
         {
-            _dbContext = dbContext;
-        }
+            var valueProviderResult = bindingContext.ValueProvider.GetValue(bindingContext.ModelName);
+            var attemptedValue = valueProviderResult.FirstValue;
 
-        public object BindModel(ControllerContext controllerContext, ModelBindingContext bindingContext)
-        {
-            var attemptedValue = bindingContext.ValueProvider.GetValue(bindingContext.ModelName).AttemptedValue;
+            if (string.IsNullOrWhiteSpace(attemptedValue) || !int.TryParse(attemptedValue, out var id))
+            {
+                bindingContext.Result = ModelBindingResult.Success(null);
+                return;
+            }
 
-            return string.IsNullOrWhiteSpace(attemptedValue) ? null : _dbContext.Departments.Find(int.Parse(attemptedValue));
+            // SchoolContext is scoped: it must come from the request's service provider.
+            var dbContext = bindingContext.HttpContext.RequestServices.GetRequiredService<SchoolContext>();
+
+            var department = await dbContext.Departments.FindAsync(id);
+
+            bindingContext.Result = ModelBindingResult.Success(department);
         }
     }
 }

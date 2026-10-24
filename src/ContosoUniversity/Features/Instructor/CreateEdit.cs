@@ -3,18 +3,20 @@
     using System;
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
-    using System.Data.Entity;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using AutoMapper;
+    using AutoMapper.QueryableExtensions;
     using DAL;
     using FluentValidation;
     using MediatR;
+    using Microsoft.EntityFrameworkCore;
     using Models;
 
     public class CreateEdit
     {
-        public class Query : IAsyncRequest<Command>
+        public class Query : IRequest<Command>
         {
             public int? Id { get; set; }
         }
@@ -28,7 +30,7 @@
         }
 
 
-        public class Command : IAsyncRequest
+        public class Command : IRequest
         {
             public Command()
             {
@@ -77,16 +79,18 @@
             }
         }
 
-        public class QueryHandler : IAsyncRequestHandler<Query, Command>
+        public class QueryHandler : IRequestHandler<Query, Command>
         {
             private readonly SchoolContext _db;
+            private readonly IMapper _mapper;
 
-            public QueryHandler(SchoolContext db)
+            public QueryHandler(SchoolContext db, IMapper mapper)
             {
                 _db = db;
+                _mapper = mapper;
             }
 
-            public async Task<Command> Handle(Query message)
+            public async Task<Command> Handle(Query message, CancellationToken cancellationToken)
             {
                 Command model;
                 if (message.Id == null)
@@ -95,19 +99,19 @@
                 }
                 else
                 {
-                    model = await _db.Instructors
-                        .Where(i => i.ID == message.Id)
-                        .ProjectToSingleOrDefaultAsync<Command>();
+                    model = await _mapper
+                        .ProjectTo<Command>(_db.Instructors.Where(i => i.ID == message.Id))
+                        .SingleOrDefaultAsync(cancellationToken);
                 }
 
-                PopulateAssignedCourseData(model);
+                await PopulateAssignedCourseData(model, cancellationToken);
 
                 return model;
             }
 
-            private void PopulateAssignedCourseData(Command model)
+            private async Task PopulateAssignedCourseData(Command model, CancellationToken cancellationToken)
             {
-                var allCourses = _db.Courses;
+                var allCourses = await _db.Courses.ToListAsync(cancellationToken);
                 var instructorCourses = new HashSet<int>(model.CourseInstructors.Select(c => c.CourseID));
                 var viewModel = allCourses.Select(course => new Command.AssignedCourseData
                 {
@@ -120,7 +124,7 @@
 
         }
 
-        public class CommandHandler : AsyncRequestHandler<Command>
+        public class CommandHandler : IRequestHandler<Command>
         {
             private readonly SchoolContext _db;
 
@@ -129,7 +133,7 @@
                 _db = db;
             }
 
-            protected override async Task HandleCore(Command message)
+            public async Task Handle(Command message, CancellationToken cancellationToken)
             {
                 Instructor instructor;
                 if (message.Id == null)
@@ -143,7 +147,7 @@
                         .Include(i => i.OfficeAssignment)
                         .Include(i => i.CourseInstructors)
                         .Where(i => i.ID == message.Id)
-                        .SingleAsync();
+                        .SingleAsync(cancellationToken);
                 }
                 instructor.FirstMidName = message.FirstMidName;
                 instructor.LastName = message.LastName;
@@ -165,11 +169,11 @@
                     instructor.OfficeAssignment.Location = message.OfficeAssignmentLocation;
                 }
 
-                UpdateInstructorCourses(message.SelectedCourses, instructor);
+                await UpdateInstructorCourses(message.SelectedCourses, instructor, cancellationToken);
 
             }
 
-            private void UpdateInstructorCourses(string[] selectedCourses, Instructor instructorToUpdate)
+            private async Task UpdateInstructorCourses(string[] selectedCourses, Instructor instructorToUpdate, CancellationToken cancellationToken)
             {
                 if (selectedCourses == null)
                 {
@@ -180,7 +184,7 @@
                 var selectedCoursesHS = new HashSet<string>(selectedCourses);
                 var instructorCourses = new HashSet<int>
                     (instructorToUpdate.CourseInstructors.Select(c => c.CourseID));
-                foreach (var course in _db.Courses)
+                foreach (var course in await _db.Courses.ToListAsync(cancellationToken))
                 {
                     if (selectedCoursesHS.Contains(course.CourseID.ToString()))
                     {

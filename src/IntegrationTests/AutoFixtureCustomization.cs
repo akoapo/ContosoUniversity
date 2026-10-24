@@ -1,6 +1,6 @@
 ﻿namespace ContosoUniversity.IntegrationTests
 {
-    using Ploeh.AutoFixture;
+    using AutoFixture;
 
     public abstract class AutoFixtureCustomization : ICustomization
     {

@@ -183,4 +183,11 @@ UpgradeLog*.htm
 # Microsoft Fakes
 FakesAssemblies/
 
-tools/roundhouse/output
+tools/roundhouse/outputchecklist-*.md
+checklist-planner-*.md
+checklist-convert-*.md
+.artifacts/
+.migration-artifacts/
+progress.json
+migration-summary.md
+nextsteps.md

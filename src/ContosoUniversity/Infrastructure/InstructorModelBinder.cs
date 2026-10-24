@@ -1,22 +1,32 @@
 ﻿namespace ContosoUniversity.Infrastructure
 {
-    using System.Web.Mvc;
+    using System.Threading.Tasks;
     using DAL;
+    using Microsoft.AspNetCore.Mvc.ModelBinding;
+    using Microsoft.Extensions.DependencyInjection;
 
+    /// <summary>
+    /// Binds a route/query/form value holding an Instructor id to the tracked Instructor entity.
+    /// </summary>
     public class InstructorModelBinder : IModelBinder
     {
-        private readonly SchoolContext _dbContext;
-
-        public InstructorModelBinder(SchoolContext dbContext)
+        public async Task BindModelAsync(ModelBindingContext bindingContext)
         {
-            _dbContext = dbContext;
-        }
+            var valueProviderResult = bindingContext.ValueProvider.GetValue(bindingContext.ModelName);
+            var attemptedValue = valueProviderResult.FirstValue;
 
-        public object BindModel(ControllerContext controllerContext, ModelBindingContext bindingContext)
-        {
-            var attemptedValue = bindingContext.ValueProvider.GetValue(bindingContext.ModelName).AttemptedValue;
+            if (string.IsNullOrWhiteSpace(attemptedValue) || !int.TryParse(attemptedValue, out var id))
+            {
+                bindingContext.Result = ModelBindingResult.Success(null);
+                return;
+            }
 
-            return string.IsNullOrWhiteSpace(attemptedValue) ? null : _dbContext.Instructors.Find(int.Parse(attemptedValue));
+            // SchoolContext is scoped: it must come from the request's service provider.
+            var dbContext = bindingContext.HttpContext.RequestServices.GetRequiredService<SchoolContext>();
+
+            var instructor = await dbContext.Instructors.FindAsync(id);
+
+            bindingContext.Result = ModelBindingResult.Success(instructor);
         }
     }
 }

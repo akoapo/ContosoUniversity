@@ -2,7 +2,7 @@
 {
     using System;
     using System.Reflection;
-    using Ploeh.AutoFixture.Kernel;
+    using AutoFixture.Kernel;
 
     public class IdOmitterBuilder : ISpecimenBuilder
     {
@@ -12,7 +12,7 @@
 
             if (property == null)
             {
-                return new NoSpecimen(request);
+                return new NoSpecimen();
             }
 
             if (IsId(property))
@@ -20,7 +20,7 @@
                 return Activator.CreateInstance(property.PropertyType);
             }
 
-            return new NoSpecimen(request);
+            return new NoSpecimen();
         }
 
         private static bool IsId(PropertyInfo property)

@@ -1,14 +1,12 @@
 ﻿namespace ContosoUniversity.IntegrationTests
 {
-    using DependencyResolution;
-    using Infrastructure.Mapping;
-    using Ploeh.AutoFixture;
+    using AutoFixture;
 
     public class IntegrationTestsFixtureCustomization : AutoFixtureCustomization
     {
         protected override void CustomizeFixture(IFixture fixture)
         {
-            var scope = new StructureMapDependencyScope(IntegrationTestContainerFactory.Container);
+            var scope = new TestServiceScope(IntegrationTestContainerFactory.Services);
             var contextFixture = new TestContextFixture(scope);
             contextFixture.SetUp();
 

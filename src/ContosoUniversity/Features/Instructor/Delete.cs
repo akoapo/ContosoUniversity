@@ -2,18 +2,20 @@
 {
     using System;
     using System.ComponentModel.DataAnnotations;
-    using System.Data.Entity;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using AutoMapper;
+    using AutoMapper.QueryableExtensions;
     using DAL;
     using FluentValidation;
     using MediatR;
+    using Microsoft.EntityFrameworkCore;
     using Models;
 
     public class Delete
     {
-        public class Query : IAsyncRequest<Command>
+        public class Query : IRequest<Command>
         {
             public int? Id { get; set; }
         }
@@ -26,7 +28,7 @@
             }
         }
 
-        public class Command : IAsyncRequest
+        public class Command : IRequest
         {
             public int? ID { get; set; }
 
@@ -41,22 +43,26 @@
             public string OfficeAssignmentLocation { get; set; }
         }
 
-        public class QueryHandler : IAsyncRequestHandler<Query, Command>
+        public class QueryHandler : IRequestHandler<Query, Command>
         {
             private readonly SchoolContext _db;
+            private readonly IMapper _mapper;
 
-            public QueryHandler(SchoolContext db)
+            public QueryHandler(SchoolContext db, IMapper mapper)
             {
                 _db = db;
+                _mapper = mapper;
             }
 
-            public async Task<Command> Handle(Query message)
+            public async Task<Command> Handle(Query message, CancellationToken cancellationToken)
             {
-                return await _db.Instructors.Where(i => i.ID == message.Id).ProjectToSingleOrDefaultAsync<Command>();
+                return await _mapper
+                    .ProjectTo<Command>(_db.Instructors.Where(i => i.ID == message.Id))
+                    .SingleOrDefaultAsync(cancellationToken);
             }
         }
 
-        public class CommandHandler : AsyncRequestHandler<Command>
+        public class CommandHandler : IRequestHandler<Command>
         {
             private readonly SchoolContext _db;
 
@@ -65,19 +71,19 @@
                 _db = db;
             }
 
-            protected override async Task HandleCore(Command message)
+            public async Task Handle(Command message, CancellationToken cancellationToken)
             {
                 Instructor instructor = await _db.Instructors
                     .Include(i => i.OfficeAssignment)
                     .Where(i => i.ID == message.ID)
-                    .SingleAsync();
+                    .SingleAsync(cancellationToken);
 
                 instructor.OfficeAssignment = null;
                 _db.Instructors.Remove(instructor);
 
                 var department = await _db.Departments
                     .Where(d => d.InstructorID == message.ID)
-                    .SingleOrDefaultAsync();
+                    .SingleOrDefaultAsync(cancellationToken);
                 if (department != null)
                 {
                     department.InstructorID = null;
