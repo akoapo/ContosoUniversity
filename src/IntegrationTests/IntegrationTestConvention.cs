@@ -1,13 +1,14 @@
 ﻿namespace ContosoUniversity.IntegrationTests
 {
-    using Ploeh.AutoFixture;
+    using System;
+    using AutoFixture;
 
     public abstract class IntegrationTestConvention : FixieConvention
     {
-        public IntegrationTestConvention()
+        /// <summary>Old <c>Classes.AreInIntegrationTestNamespace()</c>.</summary>
+        protected override bool IsTestClass(Type type)
         {
-            Classes
-                .AreInIntegrationTestNamespace();
+            return base.IsTestClass(type) && type.IsInIntegrationTestNamespace();
         }
 
         protected override ICustomization AutoFixtureCustomization
