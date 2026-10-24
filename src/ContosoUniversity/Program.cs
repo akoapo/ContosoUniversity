@@ -37,7 +37,7 @@ namespace ContosoUniversity
                 options.Conventions.Add(new FeatureControllerNameConvention());
 
                 // Was FilterConfig.RegisterGlobalFilters. HandleErrorAttribute is replaced by
-                // UseExceptionHandler("/Home/Error") below.
+                // UseExceptionHandler("/Error") below.
                 options.Filters.Add<ValidatorActionFilter>();
                 options.Filters.Add<MvcTransactionFilter>();
 
@@ -101,7 +101,7 @@ namespace ContosoUniversity
             if (!app.Environment.IsDevelopment())
             {
                 // Replaces the global HandleErrorAttribute + Features/Shared/Error.cshtml.
-                app.UseExceptionHandler("/Home/Error");
+                app.UseExceptionHandler("/Error");
             }
 
             // No UseHttpsRedirection/UseHsts: the original application had no RequireHttpsAttribute

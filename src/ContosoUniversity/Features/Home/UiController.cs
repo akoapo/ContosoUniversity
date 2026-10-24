@@ -31,14 +31,5 @@
 
             return View();
         }
-
-        /// <summary>
-        /// Target of app.UseExceptionHandler("/Home/Error"); renders Features/Shared/Error.cshtml.
-        /// Replaces the MVC5 global HandleErrorAttribute registered in FilterConfig.
-        /// </summary>
-        public IActionResult Error()
-        {
-            return View("Error");
-        }
     }
 }
